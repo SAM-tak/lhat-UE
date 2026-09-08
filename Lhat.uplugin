@@ -1,0 +1,25 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "Lhat",
+  "Description": "Runtime binding for the L^ language.",
+  "Category": "Scripting",
+  "CreatedBy": "SAM-tak",
+  "CreatedByURL": "https://github.com/SAM-tak",
+  "DocsURL": "https://github.com/SAM-tak/lhat-UE",
+  "SupportURL": "https://github.com/SAM-tak/lhat-UE/issues",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "Lhat",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "PlatformAllowList": [
+        "Win64"
+      ]
+    }
+  ]
+}

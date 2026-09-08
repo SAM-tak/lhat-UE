@@ -1,0 +1,4 @@
+[submodule "LhatCore"]
+	path = LhatCore
+	url = https://github.com/SAM-tak/lhat.git
+	branch = main
