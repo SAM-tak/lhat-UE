@@ -36,6 +36,7 @@ $configureArgs = @(
 	"-B", $buildRoot,
 	"-G", $cmakeGenerator,
 	"-A", "x64",
+	"-DLHAT_WITH_FRONTEND=ON",
 	"-DLHAT_BUILD_TESTS=OFF",
 	"-DLHAT_BUILD_CLI=OFF",
 	"-DLHAT_BUILD_LSP=OFF",

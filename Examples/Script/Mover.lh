@@ -1,0 +1,19 @@
+module^game.mover
+import^ue
+
+public^let^Mover = def^{
+	self^{
+		abstract^Actor : ue.Actor,
+		@EditAnywhere Speed = 100,
+		Frames = 0,
+	},
+	override^new = f^actor:ue.Actor { self^{Actor = actor} },
+	BeginPlay = p^self^{ ue.Log($"L^ attached to {self^.Actor.GetName()}") },
+	Tick = p^self^, delta:number^{
+		var^position = self^.Actor.GetActorLocation()
+		position.X += self^.Speed * delta
+		self^.Actor.SetActorLocation(position)
+		self^.Frames += 1
+	},
+	EndPlay = p^self^{ ue.Log($"L^ stopped after {self^.Frames} frames") },
+}

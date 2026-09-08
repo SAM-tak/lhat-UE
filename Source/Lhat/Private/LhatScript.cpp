@@ -1,4 +1,5 @@
 #include "LhatScript.h"
+#include "LhatBindings.h"
 
 #include "HAL/UnrealMemory.h"
 #include "Misc/FileHelper.h"
@@ -12,9 +13,15 @@ struct FLhatProgram::FLoaderContext
 FLhatProgram::FLhatProgram(const FString& ScriptRoot, bool bStrict)
 	: LoaderContext(MakeUnique<FLoaderContext>())
 {
+	check(IsInGameThread());
 	LoaderContext->ScriptRoot = FPaths::ConvertRelativePathToFull(ScriptRoot);
 	FPaths::CollapseRelativeDirectories(LoaderContext->ScriptRoot);
 	Program = lhat_program_new(bStrict, &FLhatProgram::LoadScript, LoaderContext.Get());
+	Bindings = MakeUnique<FLhatBindings>();
+	if (Program == nullptr || !Bindings->Register(Program))
+	{
+		InitializationError = TEXT("Could not register the UE host API.");
+	}
 }
 
 FLhatProgram::~FLhatProgram()
@@ -27,18 +34,65 @@ FLhatProgram::~FLhatProgram()
 
 bool FLhatProgram::IsValid() const
 {
-	return Program != nullptr;
+	return Program != nullptr && InitializationError.IsEmpty();
 }
 
 const LhatUnit* FLhatProgram::Check(const FString& EntryPoint)
 {
-	if (Program == nullptr)
+	check(IsInGameThread());
+	if (!IsValid() || EntryPoint.IsEmpty() || !FPaths::IsRelative(EntryPoint))
+	{
+		return nullptr;
+	}
+	FString FullPath = FPaths::ConvertRelativePathToFull(LoaderContext->ScriptRoot, EntryPoint);
+	if (!FPaths::CollapseRelativeDirectories(FullPath) || !FPaths::IsUnderDirectory(FullPath, LoaderContext->ScriptRoot))
 	{
 		return nullptr;
 	}
 
 	FTCHARToUTF8 EntryPointUtf8(*EntryPoint);
 	return lhat_program_check(Program, EntryPointUtf8.Get());
+}
+
+FString FLhatProgram::GetProjectScriptRoot()
+{
+	return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / TEXT("Script"));
+}
+
+FLhatBindings& FLhatProgram::GetBindings() const
+{
+	return *Bindings;
+}
+
+FString FLhatProgram::GetDiagnostics() const
+{
+	if (!InitializationError.IsEmpty())
+	{
+		return InitializationError;
+	}
+	FString Result;
+	for (size_t Index = 0; Index < lhat_program_diagnostic_count(Program); ++Index)
+	{
+		const LhatProgramDiagnostic* Diagnostic = lhat_program_diagnostic(Program, Index);
+		Result += FString::Printf(TEXT("%s: %s\n"), UTF8_TO_TCHAR(Diagnostic->path), UTF8_TO_TCHAR(lhat_program_error_message(Diagnostic->code)));
+	}
+	for (const LhatUnit* Unit = lhat_program_units(Program); Unit; Unit = lhat_unit_next(Unit))
+	{
+		for (size_t Index = 0; Index < lhat_unit_diagnostic_count(Unit); ++Index)
+		{
+			const size_t Length = lhat_unit_diagnostic_write(Unit, Index, false, nullptr, 0);
+			TArray<char> Text;
+			Text.SetNumUninitialized(static_cast<int32>(Length + 1));
+			lhat_unit_diagnostic_write(Unit, Index, false, Text.GetData(), Text.Num());
+			Result += UTF8_TO_TCHAR(Text.GetData());
+			Result += TEXT("\n");
+		}
+	}
+	if (lhat_program_compile_status(Program) != LHAT_COMPILE_OK)
+	{
+		Result += UTF8_TO_TCHAR(lhat_compile_status_message(lhat_program_compile_status(Program)));
+	}
+	return Result;
 }
 
 bool FLhatProgram::Compile()
@@ -78,9 +132,13 @@ char* FLhatProgram::LoadScript(void* Context, const char* Path, size_t* OutLengt
 	}
 
 	const FString RequestedPath = UTF8_TO_TCHAR(Path);
+	*OutLength = 0;
+	if (!FPaths::IsRelative(RequestedPath))
+	{
+		return nullptr;
+	}
 	FString FullPath = FPaths::ConvertRelativePathToFull(Loader->ScriptRoot, RequestedPath);
-	FPaths::CollapseRelativeDirectories(FullPath);
-	if (!FPaths::IsUnderDirectory(FullPath, Loader->ScriptRoot))
+	if (!FPaths::CollapseRelativeDirectories(FullPath) || !FPaths::IsUnderDirectory(FullPath, Loader->ScriptRoot))
 	{
 		return nullptr;
 	}

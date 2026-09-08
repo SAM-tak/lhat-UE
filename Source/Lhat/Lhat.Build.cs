@@ -6,11 +6,14 @@ public class Lhat : ModuleRules
 	public Lhat(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		// Keep this small binding module's translation units independently checked.
+		bUseUnity = false;
 
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
-			"Core"
+			"Core", "CoreUObject", "Engine"
 		});
+		PrivateDependencyModuleNames.Add("Projects");
 
 		if (Target.Platform != UnrealTargetPlatform.Win64)
 		{

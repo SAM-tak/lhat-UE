@@ -29,6 +29,10 @@ public:
 	LhatMachine* CreateMachine() const;
 	bool Install(LhatMachine* Machine) const;
 	LhatProgram* GetNativeHandle() const;
+	FString GetDiagnostics() const;
+	class FLhatBindings& GetBindings() const;
+	static FString GetProjectScriptRoot();
+	bool ReadParameterDefaults(const FString& EntryPoint, struct FInstancedPropertyBag& Out, FString& Error);
 
 	static void DestroyMachine(LhatMachine* Machine);
 
@@ -38,5 +42,7 @@ private:
 	static char* LoadScript(void* Context, const char* Path, size_t* OutLength);
 
 	TUniquePtr<FLoaderContext> LoaderContext;
+	TUniquePtr<class FLhatBindings> Bindings;
 	LhatProgram* Program = nullptr;
+	FString InitializationError;
 };
