@@ -20,6 +20,14 @@
       "PlatformAllowList": [
         "Win64"
       ]
+    },
+    {
+      "Name": "LhatEditor",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "PlatformAllowList": [
+        "Win64"
+      ]
     }
   ]
 }

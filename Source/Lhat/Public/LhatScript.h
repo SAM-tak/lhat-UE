@@ -30,6 +30,8 @@ public:
 	bool Install(LhatMachine* Machine) const;
 	LhatProgram* GetNativeHandle() const;
 	FString GetDiagnostics() const;
+	/** Registered host API as UTF-8 JSON, without BOM/NUL. Does not load or run scripts. */
+	bool GetHostApiJson(TArray<uint8>& OutUtf8, FString& Error) const;
 	class FLhatBindings& GetBindings() const;
 	static FString GetProjectScriptRoot();
 	bool ReadParameterDefaults(const FString& EntryPoint, struct FInstancedPropertyBag& Out, FString& Error);

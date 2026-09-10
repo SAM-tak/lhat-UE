@@ -2,7 +2,7 @@
 
 #include "Modules/ModuleManager.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogLhat, Log, All);
+LHAT_API DECLARE_LOG_CATEGORY_EXTERN(LogLhat, Log, All);
 
 class FLhatModule final : public IModuleInterface
 {

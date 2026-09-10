@@ -127,6 +127,49 @@ lifetime management. Restart the editor after changing the C++ plugin; dynamic
 module reload is disabled because native callbacks and type tags retain code
 addresses.
 
+## Generate lhat-host.json for the language server
+
+Build the project's Development Editor target, then use either entry point.
+Both export the same registrations as `FLhatProgram`, including UE types,
+inheritance, function signatures, vector fields and `@EditAnywhere`. No map,
+PIE session or valid `.lh` source is required.
+
+In the Editor's Output Log console:
+
+```text
+Lhat.DumpHostApi
+Lhat.DumpHostApi "Saved/Host API/lhat-host.json"
+```
+
+From a terminal (PowerShell example):
+
+```powershell
+& 'C:\Path\To\UnrealEngine\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' `
+    'C:\Path\To\Project\Project.uproject' `
+    -run=LhatDumpHostApi -unattended -NullRHI -nosound
+```
+
+The default output is `<Project>/lhat-host.json`, beside the `.uproject` file.
+Override it with `-Output="Saved/Host API/lhat-host.json"` on the commandlet, or the console's
+optional quoted argument. **Relative paths use the project directory**, not
+the shell's working directory or the plugin directory. Parent directories
+are created; an existing generated file is replaced with UTF-8 JSON without
+a BOM. Read-only destinations are not forcibly overwritten. The commandlet
+returns a nonzero exit code on failure; `-Help` prints its usage.
+
+The commandlet runs UE without an editor window. It is not a switch for the
+generic `lhat` CLI: that executable has no UE registrations to export. The
+`LhatEditor` module supplies both entry points and is excluded from game builds.
+The C++ `FLhatProgram::GetHostApiJson()` API also returns the UTF-8 payload.
+
+Place the JSON at the project root visible to the LSP. The default works when
+opening the UE project directory, including its `Script/` sources. If editing
+this plugin's examples instead, use `-Output="Plugins/lhat-UE/lhat-host.json"` to export into this
+repository; the game's Script directory is outside the plugin workspace.
+Regenerate after changing native registrations and rebuilding the plugin.
+The JSON describes only the currently exposed API, not every UE API, and is
+not the binary signature table used by a future VM-only Shipping build.
+
 ## Tests
 
 Build the project's Development Editor target, then run:
@@ -139,6 +182,8 @@ Build the project's Development Editor target, then run:
 The `Lhat.Runtime.*` UE automation tests run headlessly, covering component
 lifecycle, independent instances, both GCs, destroyed-Actor access, path
 validation, parameter defaults/overrides, reflected calls and execution budgets.
+`Lhat.Editor.*` additionally checks host-API JSON, console/commandlet parity,
+the project-root default, explicit output paths and preservation of read-only files on export failure.
 Tests create uniquely named temporary fixtures below the project's `Script/`
 and remove their own files; they do not overwrite project scripts. The runner
 fails for failed/missing tests and prints the log path under `Saved/Logs`.
