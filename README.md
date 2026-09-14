@@ -9,6 +9,7 @@ Engine projects.
 - Windows 64-bit
 - Visual Studio 2022 or 2026 with the C++ game-development workload
 - CMake 3.25 or later
+- Python 3.11 or later (binding/API header generation)
 
 The plugin owns its L^ dependency as the `LhatCore` git submodule. It
 does not refer to a project-relative checkout of the language core. The pinned
@@ -35,11 +36,25 @@ line, language-server, debugger, standard-library and test targets disabled.
 It produces the static `lhat` and `lhatport` libraries under
 `Intermediate/LhatCore/Win64`. Those files, including the generated
 `lhat/version.h`, are deliberately not committed.
+It also generates UE-decorated public C headers and a DLL export list. All UE
+modules use the **same LhatCore instance inside the Lhat DLL**, rather than
+separate static-library copies with incompatible allocator state. The original
+LhatCore headers remain unchanged. Use `-Python` to select a Python executable.
 
 For a debug build, use `-Configuration Debug`. All other Unreal configurations
 link the Release variant.
 
 ## Using it in an Unreal project
+
+For a matching-engine **binary package**, copy its `Lhat/` directory into
+`<Project>/Plugins/Lhat/` and enable the plugin. Blueprint-only projects do not
+need `Source/`, generated project modules, CMake, Python or a LhatCore checkout
+to use the bundled Engine API in the Editor. See
+[BundledEngineApi.md](Docs/BundledEngineApi.md) for the included API, package
+build command and binary-only smoke test. Binary packages are specific to the
+UE build/platform/configuration used to produce them.
+
+For a **source checkout / plugin development**:
 
 Place this repository under a project's `Plugins/lhat-UE` directory (as this
 development project does) and enable the **Lhat** plugin in the `.uproject`
@@ -96,11 +111,18 @@ exposed due to an argument-layout issue in the pinned core; see
 [known issues and reproduction notes](Docs/KnownIssues.md).
 `SetActorLocation` returns bool and currently performs a no-sweep move; it is
 a small manual adapter, not the full UE overload with `FHitResult` output.
-GetActorLocation, SetActorHiddenInGame and IsActorTickEnabled use the reflected
-`UFunction` bridge with initialized parameter storage and reflected return
-offsets. The bridge has a deliberately small, explicit native-method allowlist;
-arbitrary Blueprint calls, out parameters, containers, latent calls, delegates,
-RPCs and script-defined UClasses are not supported yet.
+These initial methods now call C++ directly. Additional native Blueprint APIs,
+including editor APIs, can be generated without Lhat-specific exposure metadata:
+
+```powershell
+.\Scripts\GenerateNativeBindings.ps1 -EngineRoot C:\Path\To\UnrealEngine `
+    -ProjectPath C:\Path\To\Project\Project.uproject -Install -Build
+```
+
+This creates project-side Runtime/Editor modules, direct C++ callbacks and an
+explicit unsupported-API report. See [generated native bindings](Docs/NativeBindings.md)
+for naming, supported codecs, regeneration and limitations. It is an initial
+generation pipeline, not complete coverage of every Blueprint signature.
 
 ## Runtime ownership and diagnostics
 
@@ -181,20 +203,35 @@ Build the project's Development Editor target, then run:
 
 The `Lhat.Runtime.*` UE automation tests run headlessly, covering component
 lifecycle, independent instances, both GCs, destroyed-Actor access, path
-validation, parameter defaults/overrides, reflected calls and execution budgets.
+validation, parameter defaults/overrides, native calls and execution budgets.
 `Lhat.Editor.*` additionally checks host-API JSON, console/commandlet parity,
 the project-root default, explicit output paths and preservation of read-only files on export failure.
+With generated project modules installed, it also executes generated native
+callbacks and checks that ordinary instance calls never enter `ProcessEvent`.
+The offline generator tests run with `python Scripts/TestNativeGenerator.py`.
 Tests create uniquely named temporary fixtures below the project's `Script/`
 and remove their own files; they do not overwrite project scripts. The runner
 fails for failed/missing tests and prints the log path under `Saved/Logs`.
 
 ## Remaining milestones
 
+The opt-in [binding benchmark](Docs/BindingBenchmark.md) compares generated
+direct Engine calls with a cached `ProcessEvent` bridge from actual Lhat loops.
+Run `Scripts/BenchmarkBindings.ps1 -EngineRoot ... -ProjectPath ...` after
+building the Development Editor target with generated native providers.
+
 This is an editor/development binding slice, not a packaged-game pipeline.
+Plugin-owned static Engine bindings and a precompiled-plugin packaging path
+are available. The [automatic reflection bridge](Docs/DynamicBindings.md)
+adds supported native/Blueprint functions and property accessors when no
+static callback exists. It also contributes to host API exports; use
+`-run=LhatDumpHostApi -BindingReport` for dispatch and exclusion details.
+General structs/containers, latent/delegate integration, and a cooked native
+callable-policy catalog remain separate milestones.
 Even `BuildLhat.ps1 -Configuration Shipping` currently builds with the front
 end. Raw source staging, a UE-aware compile commandlet, signature-table export,
 VM-only Shipping linkage and a packaged-game smoke test remain to be added
-before broad automatic API exposure. They must share the registrations used
+before production packaging. They must share the registrations used
 by the runtime; the generic L^ CLI does not know the `ue` host module.
 
 ## Updating the L^ revision

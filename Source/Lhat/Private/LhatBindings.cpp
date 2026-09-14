@@ -2,6 +2,7 @@
 
 #include "GameFramework/Actor.h"
 #include "LhatModule.h"
+#include "LhatNativeBindings.h"
 
 namespace
 {
@@ -78,6 +79,34 @@ namespace
 			*Count = 1;
 		}
 	}
+
+	void GetLocation(LhatMachine* Machine, void* Context, const LhatValue* Args, size_t, LhatValue* Answers, int* Count)
+	{
+		auto& B = *static_cast<FLhatBindings*>(Context);
+		if (auto* Actor = static_cast<AActor*>(B.ReadObject(Machine, Args[0], AActor::StaticClass())))
+		{
+			const FVector Value = Actor->K2_GetActorLocation();
+			if (lhat_make_hostvalue(Machine, B.VectorTag, &Value, &Answers[0])) *Count = 1;
+		}
+	}
+	void SetHidden(LhatMachine* Machine, void* Context, const LhatValue* Args, size_t, LhatValue*, int*)
+	{
+		auto& B = *static_cast<FLhatBindings*>(Context);
+		if (auto* Actor = static_cast<AActor*>(B.ReadObject(Machine, Args[0], AActor::StaticClass())))
+		{
+			bool Hidden;
+			if (LhatUEBindings::Read(Machine, B, Args[1], Hidden)) Actor->SetActorHiddenInGame(Hidden);
+		}
+	}
+	void IsTickEnabled(LhatMachine* Machine, void* Context, const LhatValue* Args, size_t, LhatValue* Answers, int* Count)
+	{
+		auto& B = *static_cast<FLhatBindings*>(Context);
+		if (auto* Actor = static_cast<AActor*>(B.ReadObject(Machine, Args[0], AActor::StaticClass())))
+		{
+			Answers[0] = lhat_bool(Actor->IsActorTickEnabled());
+			*Count = 1;
+		}
+	}
 }
 
 bool FLhatBindings::Register(LhatProgram* Program)
@@ -90,9 +119,9 @@ bool FLhatBindings::Register(LhatProgram* Program)
 		&& lhat_register_member(Program, "ue", "Object", "dispose", "p^self^;", DisposeObject, nullptr)
 		&& lhat_register_member(Program, "ue", "Object", "GetName", "f^self^ -> string^;", GetName, this)
 		&& lhat_register_member(Program, "ue", "Object", "IsValid", "f^self^ -> bool^;", IsObjectValid, this)
-		&& RegisterFunction(Program, AActor::StaticClass(), "Actor", "GetActorLocation", TEXT("K2_GetActorLocation"))
-		&& RegisterFunction(Program, AActor::StaticClass(), "Actor", "SetActorHiddenInGame", TEXT("SetActorHiddenInGame"))
-		&& RegisterFunction(Program, AActor::StaticClass(), "Actor", "IsActorTickEnabled", TEXT("IsActorTickEnabled"))
+		&& lhat_register_member(Program, "ue", "Actor", "GetActorLocation", "f^self^ -> ue.Vector;", GetLocation, this)
+		&& lhat_register_member(Program, "ue", "Actor", "SetActorHiddenInGame", "p^self^, bool^;", SetHidden, this)
+		&& lhat_register_member(Program, "ue", "Actor", "IsActorTickEnabled", "f^self^ -> bool^;", IsTickEnabled, this)
 		&& lhat_register_member(Program, "ue", "Actor", "SetActorLocation", "p^self^, ue.Vector -> bool^;", SetLocation, this)
 		// See Docs/KnownIssues.md: type-level hostvalue methods misplace arguments in the pinned core.
 		&& lhat_register_func(Program, "ue", "MakeVector", "f^number^, number^, number^ -> ue.Vector;", MakeVector, this)
@@ -101,7 +130,8 @@ bool FLhatBindings::Register(LhatProgram* Program)
 		&& lhat_register_hostvalue_field(Program, "ue", "Vector", "Z", STRUCT_OFFSET(FVector, Z), LHAT_HVFIELD_F64)
 		&& lhat_register_func(Program, "ue", "Log", "p^string^;", Log, this)
 		&& lhat_register_annotation(Program, "ue", "EditAnywhere", LHAT_ANNOTATION_FIELD)
-		&& lhat_register_annotation_signature(Program, "EditAnywhere", "p^;");
+		&& lhat_register_annotation_signature(Program, "EditAnywhere", "p^;")
+		&& LhatUEBindings::RegisterProviders(Program, *this);
 }
 
 bool FLhatBindings::WrapObject(LhatMachine* Machine, UObject* Object, LhatValue& Out) const
@@ -121,6 +151,10 @@ bool FLhatBindings::WrapObject(LhatMachine* Machine, UObject* Object, LhatValue&
 		}
 	}
 	const auto* Tag = Object->IsA<AActor>() ? ActorTag : ObjectTag;
+	for (UClass* Class = Object->GetClass(); Class; Class = Class->GetSuperClass())
+	{
+		if (const FObjectType* Type = ObjectTypes.Find(Class)) { Tag = Type->Tag; break; }
+	}
 	auto* Handle = new FLhatObjectHandle{Object};
 	if (!lhat_machine_make_hostdata(Machine, Tag, Handle, &Out))
 	{

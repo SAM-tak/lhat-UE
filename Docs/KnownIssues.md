@@ -33,3 +33,41 @@ lhat_register_func(program, "ue", "MakeVector",
 the nested call into SetActorLocation. Revisit type-level constructors after
 a core fix and a corresponding regression test; do not silently treat nil
 arguments as zero-valued numbers.
+
+## Redundant parent/child imports fault at runtime
+
+Observed with LhatCore `20008749c496afd73b7af1223fdcdb230eb402d0`, frontend
+enabled, Win64 Release. A standalone C host reproduces this without Unreal:
+register functions in both `ue` and `ue.Engine`, install the program, then run:
+
+```text
+import^ue
+import^ue.Engine
+```
+
+Checking succeeds, but execution faults on the second import with
+"this table belongs to the machine; what it holds is written by the host,
+not from here". The core's existing parent/child import tests exercise checking,
+not execution. No upstream fix is made here.
+
+Importing the parent **once** is sufficient to reach its registered children:
+
+```text
+import^ue
+let^ value = ue.Engine.KismetMathLibrary.Abs(-42.0)
+let^ vector = ue.MakeVector(1, 2, 3)
+```
+
+Importing only children also works. When separate module aliases are wanted,
+use the expression form, for example `let^ Engine = import^ue.Engine`.
+`Lhat.Editor.GeneratedNativeScript` covers the parent-only route with both
+generated Runtime/Editor functions and a vector argument/return.
+
+## Wide hostvalue returns at the C call boundary
+
+In the same pinned revision, `lhat_machine_call_member` intentionally converts
+a hostvalue return into `nil`, because that C entry boundary has no result slots
+for wide values. This does not indicate a failed native callback. Inspect such
+results inside Lhat code (for example, return the vector's numeric fields),
+where the VM reserves the correct slots. The generated native integration test
+uses this route; the language core is unchanged.

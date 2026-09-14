@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="SurveyExporter.cs" />
+    <Reference Include="EpicGames.UHT" HintPath="$(EngineRoot)/Engine/Binaries/DotNET/UnrealBuildTool/EpicGames.UHT.dll" />
+    <Reference Include="EpicGames.Core" HintPath="$(EngineRoot)/Engine/Binaries/DotNET/UnrealBuildTool/EpicGames.Core.dll" />
+    <Reference Include="EpicGames.Build" HintPath="$(EngineRoot)/Engine/Binaries/DotNET/UnrealBuildTool/EpicGames.Build.dll" />
+  </ItemGroup>
+</Project>

@@ -1,5 +1,6 @@
 #include "LhatScript.h"
 #include "LhatBindings.h"
+#include "LhatNativeBindings.h"
 
 #include "HAL/UnrealMemory.h"
 #include "Misc/FileHelper.h"
@@ -16,6 +17,7 @@ FLhatProgram::FLhatProgram(const FString& ScriptRoot, bool bStrict)
 	check(IsInGameThread());
 	LoaderContext->ScriptRoot = FPaths::ConvertRelativePathToFull(ScriptRoot);
 	FPaths::CollapseRelativeDirectories(LoaderContext->ScriptRoot);
+	if (!LhatUEBindings::LoadGeneratedProviders(InitializationError)) return;
 	Program = lhat_program_new(bStrict, &FLhatProgram::LoadScript, LoaderContext.Get());
 	Bindings = MakeUnique<FLhatBindings>();
 	if (Program == nullptr || !Bindings->Register(Program))

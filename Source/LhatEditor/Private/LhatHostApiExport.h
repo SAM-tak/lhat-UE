@@ -8,5 +8,5 @@ namespace LhatHostApi
 	FString GetDefaultOutputPath();
 
 	/** Empty means <Project>/lhat-host.json; relative paths are relative to ProjectDir. */
-	bool Export(const FString& RequestedPath, FString& OutputFile, FString& Error);
+	bool Export(const FString& RequestedPath, FString& OutputFile, FString& Error, bool bBindingReport = false);
 }

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "description": "Initial precompiled Engine acceleration set, not the dynamic API exposure policy. All supported Blueprint-callable native members of these classes are included.",
+  "classes": [
+    "/Script/Engine.KismetMathLibrary",
+    "/Script/Engine.KismetStringLibrary",
+    "/Script/Engine.KismetSystemLibrary",
+    "/Script/Engine.GameplayStatics",
+    "/Script/Engine.Actor",
+    "/Script/Engine.Pawn",
+    "/Script/Engine.Character",
+    "/Script/Engine.Controller",
+    "/Script/Engine.PlayerController",
+    "/Script/Engine.ActorComponent",
+    "/Script/Engine.SceneComponent",
+    "/Script/Engine.PrimitiveComponent",
+    "/Script/Engine.MovementComponent",
+    "/Script/Engine.PawnMovementComponent",
+    "/Script/Engine.CharacterMovementComponent",
+    "/Script/Engine.MeshComponent",
+    "/Script/Engine.StaticMeshComponent",
+    "/Script/Engine.SkeletalMeshComponent"
+  ]
+}

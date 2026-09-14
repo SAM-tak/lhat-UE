@@ -1,4 +1,5 @@
 #include "LhatBindings.h"
+#include "LhatDynamicBindings.h"
 
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"

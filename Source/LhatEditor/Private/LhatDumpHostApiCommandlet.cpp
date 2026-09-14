@@ -16,7 +16,7 @@ int32 ULhatDumpHostApiCommandlet::Main(const FString& Params)
 {
 	if (FParse::Param(*Params, TEXT("Help")))
 	{
-		UE_LOG(LogLhat, Display, TEXT("-run=LhatDumpHostApi [-Output=\"path\"]. Default: <Project>/lhat-host.json. Relative paths use ProjectDir. Existing output is replaced."));
+		UE_LOG(LogLhat, Display, TEXT("-run=LhatDumpHostApi [-Output=\"path\"] [-BindingReport]. Defaults: <Project>/lhat-host.json or lhat-bindings.json for the dispatch/exclusion report. Existing output is replaced."));
 		return 0;
 	}
 	FString RequestedPath;
@@ -27,7 +27,7 @@ int32 ULhatDumpHostApiCommandlet::Main(const FString& Params)
 		return 2;
 	}
 	FString OutputFile, Error;
-	if (!LhatHostApi::Export(RequestedPath, OutputFile, Error))
+	if (!LhatHostApi::Export(RequestedPath, OutputFile, Error, FParse::Param(*Params, TEXT("BindingReport"))))
 	{
 		UE_LOG(LogLhat, Error, TEXT("Host API export failed: %s"), *Error);
 		return 1;

@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
 	[ValidateSet("Debug", "Development", "Test", "Shipping")]
-	[string]$Configuration = "Development"
+	[string]$Configuration = "Development",
+	[string]$Python = "python"
 )
 
 $ErrorActionPreference = "Stop"
@@ -68,3 +69,5 @@ if ($missingArtifacts) {
 }
 
 Write-Host "Lhat $cmakeConfiguration libraries are ready in $buildRoot."
+
+& (Join-Path $PSScriptRoot 'GenerateCoreApi.ps1') -Configuration $cmakeConfiguration -Python $Python

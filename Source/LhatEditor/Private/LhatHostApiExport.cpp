@@ -2,6 +2,7 @@
 
 #include "HAL/FileManager.h"
 #include "LhatScript.h"
+#include "LhatBindings.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Windows/WindowsHWrapper.h"
@@ -11,12 +12,12 @@ FString LhatHostApi::GetDefaultOutputPath()
 	return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), TEXT("lhat-host.json"));
 }
 
-bool LhatHostApi::Export(const FString& RequestedPath, FString& OutputFile, FString& Error)
+bool LhatHostApi::Export(const FString& RequestedPath, FString& OutputFile, FString& Error, bool bBindingReport)
 {
 	check(IsInGameThread());
 	Error.Empty();
 	OutputFile = RequestedPath.IsEmpty()
-		? GetDefaultOutputPath()
+		? (bBindingReport ? FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), TEXT("lhat-bindings.json")) : GetDefaultOutputPath())
 		: FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), RequestedPath);
 	FPaths::NormalizeFilename(OutputFile);
 	if (!FPaths::CollapseRelativeDirectories(OutputFile) || FPaths::GetCleanFilename(OutputFile).IsEmpty()
@@ -29,7 +30,14 @@ bool LhatHostApi::Export(const FString& RequestedPath, FString& OutputFile, FStr
 	// Reuse exactly the runtime registrations, without checking any source or creating a VM.
 	FLhatProgram Program(FLhatProgram::GetProjectScriptRoot());
 	TArray<uint8> Json;
-	if (!Program.GetHostApiJson(Json, Error)) return false;
+	if (bBindingReport)
+	{
+		if (!Program.IsValid()) { Error = Program.GetDiagnostics(); return false; }
+		const FString Report = Program.GetBindings().GetDynamicBindingReport();
+		const FTCHARToUTF8 Utf8(*Report);
+		Json.Append(reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+	}
+	else if (!Program.GetHostApiJson(Json, Error)) return false;
 
 	const FString Directory = FPaths::GetPath(OutputFile);
 	if (!IFileManager::Get().MakeDirectory(*Directory, true))
